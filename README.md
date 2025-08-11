@@ -2,7 +2,7 @@
 
 An MCP (Model Context Protocol) server that provides web search and code execution capabilities using OpenAI models. The `iris` tool supports model selection (gpt-5/o3) and optional code interpreter for data analysis.
 
-**Version: 0.3.0**
+*Named after Iris, the Greek goddess of the rainbow and divine messenger, who swiftly carries information between gods and mortals.*
 
 ## Installation
 

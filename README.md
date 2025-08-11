@@ -11,9 +11,7 @@ An MCP (Model Context Protocol) server that provides web search and code executi
 Simply install and use the package from the official npm registry:
 
 ```bash
-$ claude mcp add iris -s user \
-	-e OPENAI_API_KEY=your-api-key \
-	-- npx @mokemokechicken/mcp-ai-assistant-iris
+claude mcp add iris -s user -e OPENAI_API_KEY=your-api-key -- npx @mokemokechicken/mcp-ai-assistant-iris
 ```
 
 Or configure manually in Claude:

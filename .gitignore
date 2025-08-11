@@ -27,5 +27,6 @@ build/
 server/
 *.dxt
 
+.env
 .mcp.json
 *.local.*

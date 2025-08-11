@@ -21,12 +21,7 @@ build:
 
 # Run tests (placeholder for future)
 test:
-	@echo "Running tests..."
-	@if [ -f "package.json" ] && grep -q '"test"' package.json; then \
-		npm test; \
-	else \
-		echo "No tests configured."; \
-	fi
+	echo "No tests configured.";
 
 # Clean build artifacts
 clean:

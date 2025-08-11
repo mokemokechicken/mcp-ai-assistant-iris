@@ -1,10 +1,11 @@
-.PHONY: help build test clean publish publish-patch publish-minor publish-major check-auth status
+.PHONY: help build test test-integration clean publish publish-patch publish-minor publish-major check-auth status
 
 # Default target
 help:
 	@echo "Available commands:"
 	@echo "  build          - Build the TypeScript project"
-	@echo "  test           - Run tests (if available)"
+	@echo "  test           - Run integration tests"
+	@echo "  test-integration - Run integration tests"
 	@echo "  clean          - Clean build artifacts"
 	@echo "  status         - Show current package status"
 	@echo "  check-auth     - Check npm authentication"
@@ -19,9 +20,14 @@ build:
 	npm run build
 	@echo "Build complete."
 
-# Run tests (placeholder for future)
-test:
-	echo "No tests configured.";
+# Run integration tests
+test: test-integration
+
+# Run integration tests
+test-integration: build
+	@echo "Running integration tests..."
+	npm run test:integration
+	@echo "Integration tests complete."
 
 # Clean build artifacts
 clean:

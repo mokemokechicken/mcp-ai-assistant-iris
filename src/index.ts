@@ -37,7 +37,7 @@ if (!globalThis.URLSearchParams && typeof URLSearchParams !== 'undefined') {
 // Create server instance
 const server = new McpServer({
   name: "mcp-ai-assistant-iris",
-  version: "0.3.0",
+  version: "0.4.0",
 });
 
 // Initialize OpenAI client
@@ -79,6 +79,13 @@ const errorHandling = {
   
   // OpenAI API エラー
   apiError: (error: any) => `OpenAI API error: ${error.message || error}`,
+  
+  // previous_response_id 関連エラー
+  invalidResponseId: (id: string) => 
+    `Invalid or expired previous_response_id: ${id}. Response IDs are valid for 30 days.`,
+
+  responseIdNotFound: (id: string) => 
+    `Previous response not found: ${id}. The response may have expired (30 day limit) or never existed.`,
   
   // 一般的なエラー
   generalError: (error: any) => `Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`
@@ -145,19 +152,53 @@ function processOpenAIResponse(response: any): string {
   }
 }
 
+// Task3: Response Processing with ID Extension
+function processOpenAIResponseWithId(response: any): {
+  text: string;
+  response_id?: string;
+} {
+  try {
+    // 既存のテキスト処理
+    const processedText = processOpenAIResponse(response);
+    
+    // response.id を抽出
+    const responseId = response.id;
+    
+    // テキストにResponse IDを追加
+    const textWithId = responseId 
+      ? `${processedText}\n\n[Response ID: ${responseId}]`
+      : processedText;
+    
+    return {
+      text: textWithId,
+      response_id: responseId
+    };
+  } catch (error) {
+    console.error("Error in processOpenAIResponseWithId:", error);
+    return {
+      text: response.output_text || "Error processing response."
+    };
+  }
+}
+
 
 // Define the iris tool
 server.tool(
   "iris",
-  `iris (v0.3.0): An AI agent with advanced web search and code execution capabilities. Supports model selection (gpt-5/o3) and optional code interpreter for data analysis. Useful for finding latest information, troubleshooting errors, and executing code. Supports natural language queries.`,
+  `iris (v0.4.0): An AI agent with advanced web search and code execution capabilities. Supports model selection (gpt-5/o3) and optional code interpreter for data analysis. Useful for finding latest information, troubleshooting errors, and executing code. Supports natural language queries.`,
   { 
     input: z.string().describe('Ask questions, search for information, or consult about complex problems in English.'),
     searchContextSize: z.enum(['low', 'medium', 'high']).optional().describe('Search context size for web search (low/medium/high). Defaults to medium.'),
     reasoningEffort: z.enum(['low', 'medium', 'high']).optional().describe('Reasoning effort level (low/medium/high). Defaults to medium.'),
     model: z.enum(['gpt-5', 'o3']).optional().describe('AI model to use (gpt-5/o3). Defaults to gpt-5 (is better).'),
     useCodeInterpreter: z.boolean().optional().describe('Enable code interpreter for data analysis and code execution. Defaults to false.'),
+    previous_response_id: z.string().optional().describe(
+      'Previous OpenAI response ID for conversation continuity. ' +
+      'Valid for 30 days from creation. Enables context preservation ' +
+      'across multiple tool calls. Use the Response ID from previous iris tool response.'
+    ),
   },
-  async ({ input, searchContextSize: contextSize, reasoningEffort: effort, model, useCodeInterpreter }) => {
+  async ({ input, searchContextSize: contextSize, reasoningEffort: effort, model, useCodeInterpreter, previous_response_id }) => {
     const finalContextSize = contextSize || 'medium';
     const finalReasoningEffort = effort || 'medium';
     const finalUseCodeInterpreter = useCodeInterpreter || false;
@@ -169,26 +210,42 @@ server.tool(
       // Task4: Use dynamic tools construction
       const dynamicTools = buildToolsArray(finalContextSize, finalUseCodeInterpreter);
       
-      const response = await openai.responses.create({
+      const apiRequest: any = {
         model: selectedModel,
         input,
         tools: dynamicTools,
         tool_choice: 'auto',
         parallel_tool_calls: true,
         reasoning: { effort: finalReasoningEffort },
-      })
+      };
 
-      // Task6: Use enhanced response processing
-      const processedText = processOpenAIResponse(response);
-      
-      return {
+      // previous_response_id が指定されている場合のみ追加
+      if (previous_response_id) {
+        apiRequest.previous_response_id = previous_response_id;
+      }
+
+      const response = await openai.responses.create(apiRequest);
+
+      // Task6: Use enhanced response processing with ID
+      const { text, response_id } = processOpenAIResponseWithId(response);
+
+      const result: any = {
         content: [
           {
             type: "text",
-            text: processedText,
+            text: text,
           },
         ],
       };
+
+      // structuredContent を追加（response_id が存在する場合）
+      if (response_id) {
+        result.structuredContent = {
+          response_id: response_id
+        };
+      }
+
+      return result;
     } catch (error) {
       // Task7: Enhanced Error Handling
       let errorMessage: string;
@@ -206,6 +263,13 @@ server.tool(
           // Code Interpreter specific error
           console.error("Code Interpreter error:", error);
           errorMessage = errorHandling.codeInterpreterError(error);
+        } else if (error.message.includes('previous_response_id') || 
+                   error.message.includes('response not found') ||
+                   error.message.includes('invalid response') ||
+                   (error as any).code === 'invalid_response_id') {
+          // previous_response_id 関連エラー
+          console.error("Previous response ID error:", error);
+          errorMessage = errorHandling.invalidResponseId(previous_response_id || 'unknown');
         } else if (error.name === 'OpenAIError' || 
                    error.name === 'APIError' ||
                    error.message.includes('OpenAI') || 

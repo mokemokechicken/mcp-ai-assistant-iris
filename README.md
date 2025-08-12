@@ -35,6 +35,7 @@ Or configure manually in Claude:
 - **Model Selection**: Choose between gpt-5 (default) and o3.
 - **Web Search**: Advanced web search capabilities with configurable context size
 - **Code Interpreter**: Optional code execution for data analysis and visualization
+- **Conversation Continuity**: Continue previous conversations using response IDs
 - **Flexible Configuration**: Customizable reasoning effort and search context
 
 ## Usage
@@ -47,6 +48,39 @@ The `iris` tool accepts the following parameters:
 - `reasoningEffort` (optional): Reasoning effort level - "low", "medium", or "high" (default: "medium")
 - `model` (optional): AI model to use - "gpt-5" or "o3" (default: "gpt-5")
 - `useCodeInterpreter` (optional): Enable code interpreter for data analysis (default: false)
+- `previous_response_id` (optional): Previous OpenAI response ID for conversation continuity
+
+### Conversation Continuity
+
+The `iris` tool supports conversation continuity through the `previous_response_id` parameter. This allows you to maintain context across multiple tool calls by referencing a previous response.
+
+#### How it works:
+1. Each `iris` tool response includes a Response ID in the format: `[Response ID: resp_abc123xyz]`
+2. Use this Response ID as the `previous_response_id` parameter in subsequent calls
+3. The AI will automatically continue the conversation with full context
+
+#### Response Format:
+When you call the `iris` tool, the response will include:
+- The main response content
+- A Response ID at the end in the format: `[Response ID: {response_id}]`
+
+#### Usage Example:
+```
+First call:
+- input: "Tell me about machine learning"
+- Response: "Machine learning is... [Response ID: resp_abc123xyz]"
+
+Second call (continuing the conversation):
+- input: "Can you give me some practical examples?"
+- previous_response_id: "resp_abc123xyz"
+- Response: "Based on our previous discussion about machine learning... [Response ID: resp_def456uvw]"
+```
+
+#### Important Notes:
+- **Validity Period**: Response IDs are valid for 30 days from creation
+- **Context Inheritance**: Previous conversation history, tool calls, and reasoning are preserved
+- **Cost Impact**: Previous conversation tokens are included in the input token count
+- **Instructions**: System instructions are not automatically inherited and must be specified each time
 
 
 ## Environment Variables

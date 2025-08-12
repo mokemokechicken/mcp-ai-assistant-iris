@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import fetch, { Headers, Blob, FormData, File, Request, Response } from "node-fetch";
 
-const VERSION = "0.5.1";
+const VERSION = "0.5.2";
 
 // Set up fetch and Web API polyfills for Node.js environment
 if (!globalThis.fetch) {

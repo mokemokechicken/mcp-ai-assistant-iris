@@ -1,6 +1,6 @@
 {
   "name": "@mokemokechicken/mcp-ai-assistant-iris",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "main": "server/index.js",
   "bin": {
     "mcp-ai-assistant-iris": "./server/index.js"

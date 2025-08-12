@@ -5,6 +5,8 @@ import OpenAI from "openai";
 import { z } from "zod";
 import fetch, { Headers, Blob, FormData, File, Request, Response } from "node-fetch";
 
+const VERSION = "0.5.1";
+
 // Set up fetch and Web API polyfills for Node.js environment
 if (!globalThis.fetch) {
   globalThis.fetch = fetch as any;
@@ -37,7 +39,7 @@ if (!globalThis.URLSearchParams && typeof URLSearchParams !== 'undefined') {
 // Create server instance
 const server = new McpServer({
   name: "mcp-ai-assistant-iris",
-  version: "0.5.1",
+  version: VERSION,
 });
 
 // Initialize OpenAI client
@@ -185,7 +187,7 @@ function processOpenAIResponseWithId(response: any): {
 // Define the iris tool
 server.tool(
   "iris",
-  `iris (v0.4.0): An AI agent with advanced web search and code execution capabilities. Supports model selection (gpt-5/o3) and optional code interpreter for data analysis. Useful for finding latest information, troubleshooting errors, and executing code. Supports natural language queries.`,
+  `iris (v${VERSION}): An AI agent with advanced web search and code execution capabilities. Supports model selection (gpt-5/o3) and optional code interpreter for data analysis. Useful for finding latest information, troubleshooting errors, and executing code. Supports natural language queries.`,
   { 
     input: z.string().describe('Ask questions, search for information, or consult about complex problems in English.'),
     searchContextSize: z.enum(['low', 'medium', 'high']).optional().describe('Search context size for web search (low/medium/high). Defaults to medium.'),

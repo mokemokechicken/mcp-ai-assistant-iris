@@ -38,9 +38,23 @@ class MCPIntegrationTest {
 
       // 5. 天気予報のテスト実行
       console.log('\n🌤️  Testing weather query...');
-      const result = await this.testWeatherQuery();
+      const result1 = await this.testWeatherQuery();
       console.log('✅ Weather query completed');
-      console.log('📋 Result:', JSON.stringify(result, null, 2));
+      console.log('📋 Result:', JSON.stringify(result1, null, 2));
+
+      // 6. Response IDの抽出とテスト
+      const responseId = this.extractResponseId(result1);
+      if (responseId) {
+        console.log(`\n🔗 Found Response ID: ${responseId}`);
+        
+        // 7. 会話継続テスト
+        console.log('\n🔄 Testing conversation continuity...');
+        const result2 = await this.testConversationContinuity(responseId);
+        console.log('✅ Conversation continuity test completed');
+        console.log('📋 Continuation Result:', JSON.stringify(result2, null, 2));
+      } else {
+        console.log('\n⚠️  Warning: No Response ID found in response');
+      }
 
       console.log('\n🎉 Integration test completed successfully!');
       return true;
@@ -111,11 +125,11 @@ class MCPIntegrationTest {
 
       this.serverProcess.stdout.on('data', onData);
       
-      // タイムアウト設定
+      // タイムアウト設定（conversation continuityは時間がかかる場合があるので延長）
       setTimeout(() => {
         this.serverProcess.stdout.removeListener('data', onData);
-        reject(new Error('Message timeout'));
-      }, 30000);
+        reject(new Error(`Message timeout for message: ${JSON.stringify(message, null, 2)}`));
+      }, 60000 * 3);
 
       this.serverProcess.stdin.write(messageStr);
     });
@@ -176,8 +190,8 @@ class MCPIntegrationTest {
         name: 'iris',
         arguments: {
           input: 'What is the current weather in New York City?',
-          searchContextSize: 'medium',
-          reasoningEffort: 'medium',
+          searchContextSize: 'low',
+          reasoningEffort: 'low',
           model: 'gpt-5'
         }
       }
@@ -194,6 +208,66 @@ class MCPIntegrationTest {
     }
 
     return response.result;
+  }
+
+  extractResponseId(result) {
+    try {
+      // structuredContentからresponse_idを取得
+      if (result.structuredContent && result.structuredContent.response_id) {
+        return result.structuredContent.response_id;
+      }
+
+      // テキストから[Response ID: xxx]パターンを抽出
+      if (result.content && result.content[0] && result.content[0].text) {
+        const text = result.content[0].text;
+        const match = text.match(/\[Response ID: ([^\]]+)\]/);
+        if (match) {
+          return match[1];
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error extracting response ID:', error);
+      return null;
+    }
+  }
+
+  async testConversationContinuity(previousResponseId) {
+    console.log(`📤 Sending conversation continuity request with Response ID: ${previousResponseId}`);
+    
+    const callMessage = {
+      jsonrpc: '2.0',
+      id: ++this.messageId,
+      method: 'tools/call',
+      params: {
+        name: 'iris',
+        arguments: {
+          input: 'Based on our previous conversation, can you pick up all numbers and sum up them in your response?',
+          searchContextSize: 'low',
+          reasoningEffort: 'low',
+          model: 'gpt-5',
+          previous_response_id: previousResponseId
+        }
+      }
+    };
+
+    try {
+      const response = await this.sendMessage(callMessage);
+      if (response.error) {
+        throw new Error(`Conversation continuity test failed: ${JSON.stringify(response.error)}`);
+      }
+
+      // レスポンスが成功であることを確認
+      if (!response.result || !response.result.content) {
+        throw new Error('Invalid response structure in continuation test');
+      }
+
+      return response.result;
+    } catch (error) {
+      console.error('🔴 Conversation continuity test error:', error.message);
+      throw error;
+    }
   }
 }
 

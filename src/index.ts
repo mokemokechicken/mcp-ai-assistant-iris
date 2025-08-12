@@ -37,7 +37,7 @@ if (!globalThis.URLSearchParams && typeof URLSearchParams !== 'undefined') {
 // Create server instance
 const server = new McpServer({
   name: "mcp-ai-assistant-iris",
-  version: "0.4.0",
+  version: "0.5.0",
 });
 
 // Initialize OpenAI client

@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import fetch, { Headers, Blob, FormData, File, Request, Response } from "node-fetch";
 
-const VERSION = "0.5.3";
+const VERSION = "0.5.4";
 
 // Set up fetch and Web API polyfills for Node.js environment
 if (!globalThis.fetch) {
@@ -49,10 +49,15 @@ const openai = new OpenAI({
 
 // Task3: Model Selection Logic
 function selectModel(modelParam?: string): string {
-  if (modelParam && modelParam !== 'gpt-5' && modelParam !== 'o3') {
-    throw new Error(`Invalid model: ${modelParam}. Supported models: gpt-5, o3`);
+  const supportedModels = ['gpt-5.1', 'gpt-5', 'o3'];
+
+  if (modelParam && !supportedModels.includes(modelParam)) {
+    throw new Error(`Invalid model: ${modelParam}. Supported models: ${supportedModels.join(', ')}`);
   }
-  return modelParam === 'o3' ? 'o3' : 'gpt-5';
+
+  if (modelParam === 'o3') return 'o3';
+  if (modelParam === 'gpt-5') return 'gpt-5';
+  return 'gpt-5.1';
 }
 
 // Task4: Dynamic Tools Construction
@@ -74,7 +79,7 @@ function buildToolsArray(contextSize: string, useCodeInterpreter: boolean): any[
 // Task7: Error Handling Enhancement
 const errorHandling = {
   // 無効なモデル指定
-  invalidModel: (model: string) => `Invalid model: ${model}. Supported models: gpt-5, o3`,
+  invalidModel: (model: string) => `Invalid model: ${model}. Supported models: gpt-5.1, gpt-5, o3`,
   
   // Code Interpreter エラー
   codeInterpreterError: (error: any) => `Code Interpreter error: ${error.message || error}`,
@@ -166,13 +171,13 @@ function processOpenAIResponseWithId(response: any): {
     // response.id を抽出
     const responseId = response.id;
     
-    // テキストにResponse IDを追加
-    const textWithId = responseId 
-      ? `${processedText}\n\n[Response ID: ${responseId}]`
-      : processedText;
+    // // テキストにResponse IDを追加
+    // const textWithId = responseId 
+    //   ? `${processedText}\n\n[Response ID: ${responseId}]`
+    //   : processedText;
     
     return {
-      text: textWithId,
+      text: processedText,
       response_id: responseId
     };
   } catch (error) {
@@ -187,12 +192,12 @@ function processOpenAIResponseWithId(response: any): {
 // Define the iris tool
 server.tool(
   "iris",
-  `iris (v${VERSION}): An AI agent with advanced web search and code execution capabilities. Supports model selection (gpt-5/o3) and optional code interpreter for data analysis. Useful for finding latest information, troubleshooting errors, and executing code. Supports natural language queries.`,
+  `iris (v${VERSION}): An AI agent with advanced web search and code execution capabilities. Supports model selection (gpt-5.1/gpt-5/o3) and optional code interpreter for data analysis. Useful for finding latest information, troubleshooting errors, and executing code. Supports natural language queries.`,
   { 
     input: z.string().describe('Ask questions, search for information, or consult about complex problems in English.'),
     searchContextSize: z.enum(['low', 'medium', 'high']).optional().describe('Search context size for web search (low/medium/high). Defaults to medium.'),
     reasoningEffort: z.enum(['low', 'medium', 'high']).optional().describe('Reasoning effort level (low/medium/high). Defaults to medium.'),
-    model: z.enum(['gpt-5', 'o3']).optional().describe('AI model to use (gpt-5/o3). Defaults to gpt-5 (is better).'),
+    model: z.enum(['gpt-5.1', 'gpt-5', 'o3']).optional().describe('AI model to use (gpt-5.1/gpt-5/o3). Defaults to gpt-5.1 (is better).'),
     useCodeInterpreter: z.boolean().optional().describe('Enable code interpreter for data analysis and code execution. Defaults to false.'),
     previous_response_id: z.string().optional().describe(
       'Previous OpenAI response ID for conversation continuity. ' +
@@ -235,17 +240,10 @@ server.tool(
         content: [
           {
             type: "text",
-            text: text,
+            text: JSON.stringify({ text, response_id })
           },
         ],
       };
-
-      // structuredContent を追加（response_id が存在する場合）
-      if (response_id) {
-        result.structuredContent = {
-          response_id: response_id
-        };
-      }
 
       return result;
     } catch (error) {

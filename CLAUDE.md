@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an MCP (Model Context Protocol) server that provides advanced AI capabilities including web search and code execution using OpenAI's models. The project exposes a single `iris` tool that accepts natural language queries and can perform web searches, high-precision reasoning, and code execution depending on the specified parameters.
 
-**Current Version: 0.5.4**
+**Current Version: 0.6.1**
 
 ## Architecture
 
@@ -91,4 +91,4 @@ The server exposes a single `iris` tool that supports:
 バージョン情報の更新時は以下のファイルを同期して更新:
 - `src/index.ts` (line 40)
 - `package.json` (version field)
-- `CLAUDE.md` (current version: 0.5.4)
+- `CLAUDE.md` (current version: 0.6.1)
